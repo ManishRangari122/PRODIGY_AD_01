@@ -1,125 +1,227 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
+}
+
+class CalculationHistory extends ChangeNotifier {
+  List<String> _history = [];
+
+  List<String> get history => _history;
+
+  void addCalculation(String calculation) {
+    _history.add(calculation);
+    notifyListeners();
+  }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return ChangeNotifierProvider(
+      create: (_) => CalculationHistory(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: CalculatorScreen(),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+class CalculatorScreen extends StatefulWidget {
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _CalculatorScreenState createState() => _CalculatorScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _CalculatorScreenState extends State<CalculatorScreen> {
+  String _output = "0";
+  String _input = "";
+  String _operation = "";
+  double _num1 = 0;
+  double _num2 = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  void _buttonPressed(String buttonText) {
+    if (buttonText == "C") {
+      _input = "";
+      _output = "0";
+      _num1 = 0;
+      _num2 = 0;
+      _operation = "";
+    }
+    else if (buttonText == "⌫") {
+      if (_input.isNotEmpty) {
+        _input = _input.substring(0, _input.length - 1);
+        if (_input.isEmpty) {
+          _output = "0";
+        } else {
+          _output = _input;
+        }
+      }
+    }else if (buttonText == "+" || buttonText == "-" || buttonText == "*" || buttonText == "/") {
+      _num1 = double.parse(_input);
+      _operation = buttonText;
+      _input = "";
+    } else if (buttonText == ".") {
+      if (_input.contains(".")) {
+        return;
+      } else {
+        _input += buttonText;
+      }
+    } else if (buttonText == "=") {
+      _num2 = double.parse(_input);
+
+      switch (_operation) {
+        case "+":
+          _output = (_num1 + _num2).toString();
+          break;
+        case "-":
+          _output = (_num1 - _num2).toString();
+          break;
+        case "*":
+          _output = (_num1 * _num2).toString();
+          break;
+        case "/":
+          _output = (_num1 / _num2).toString();
+          break;
+      }
+
+      Provider.of<CalculationHistory>(context, listen: false)
+          .addCalculation('$_num1 $_operation $_num2 = $_output');
+
+      _num1 = 0;
+      _num2 = 0;
+      _operation = "";
+      _input = _output;
+    } else {
+      _input += buttonText;
+      _output = _input;
+    }
+
+    setState(() {});
+  }
+
+  Widget _buildButton(String buttonText) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.all(20.0),
+            backgroundColor: Colors.black87,
+            foregroundColor: Colors.white,
+          ),
+          child: Text(
+            buttonText,
+            style: TextStyle(fontSize: 24.0),
+          ),
+          onPressed: () => _buttonPressed(buttonText),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Text('Calculator',style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => HistoryScreen()),
+              );
+            },
+          ),
+        ],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.black, Colors.white],
+          ),
+        ),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+            Container(
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.symmetric(vertical: 24.0, horizontal: 12.0),
+              child: Text(
+                _output,
+                style: TextStyle(fontSize: 48.0, color: Colors.white),
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            Expanded(
+              child: Divider(),
             ),
+            Column(children: [
+              Row(children: [
+                _buildButton("7"),
+                _buildButton("8"),
+                _buildButton("9"),
+                _buildButton("/"),
+              ]),
+              Row(children: [
+                _buildButton("4"),
+                _buildButton("5"),
+                _buildButton("6"),
+                _buildButton("*"),
+              ]),
+              Row(children: [
+                _buildButton("1"),
+                _buildButton("2"),
+                _buildButton("3"),
+                _buildButton("-"),
+              ]),
+              Row(children: [
+                _buildButton("."),
+                _buildButton("0"),
+                _buildButton("00"),
+                _buildButton("+"),
+              ]),
+              Row(children: [
+                _buildButton("C"),
+                _buildButton("⌫"),
+                _buildButton("="),
+              ]),
+            ]),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class HistoryScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Calculation History',style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.black,
+      ),
+      body: Consumer<CalculationHistory>(
+        builder: (context, history, child) {
+          return ListView.builder(
+            itemCount: history.history.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(
+                  history.history[index],
+                  style: TextStyle(color: Colors.white),
+                ),
+              );
+            },
+          );
+        },
+      ),
+      backgroundColor: Colors.black,
     );
   }
 }
